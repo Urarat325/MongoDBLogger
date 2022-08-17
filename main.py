@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import os
@@ -14,17 +15,15 @@ def main():
     output_dir = ''
     cached_stamp = ''
     cached_date = ''
-    last_index = 0
     for arg in args:
         if arg.startswith('--LogPath='):
             mongo_log_path = arg.split('=')[1]
-            mongo_log_path = 'C:\\Project\\Py\\MongoDBLogger\\test.log'
         if arg.startswith('--OutputPath='):
             output_dir = arg.split('=')[1]
 
     while True:
-        if not os.path.isdir(output_dir):
-            logging.error('Output directory does not exist = ' + output_dir)
+        if not os.path.isfile(output_dir):
+            logging.error('Output file does not exist = ' + output_dir)
             sys.exit(2)
         try:
             stamp = os.stat(mongo_log_path).st_mtime
@@ -32,32 +31,70 @@ def main():
                 cached_stamp = stamp
                 log_file = open(mongo_log_path, 'r')
                 lines = log_file.readlines()
-                flag = True
-                if len(lines) < last_index:
-                    flag = False
 
-                file = open('C:\\Project\\Py\\MongoDBLogger\\outTest.log', 'a+')
+                file = open(output_dir, 'a+', encoding='utf8')
+                if cached_date == '':
+                    file_with_last_date = open(output_dir, 'r', encoding='utf8')
+                    read_lines = file_with_last_date.readlines()
+                    if len(read_lines) > 0:
+                        print(read_lines[-1])
+                        group = re.search('(.*) CEF:0', read_lines[-1])
+                        print(group.group(1))
+                        if group is not None:
+                            cached_date = datetime.strptime(group.group(1), "%Y-%m-%d %H:%M:%S %Z%z")
+                    file_with_last_date.flush()
+                    file_with_last_date.close()
                 for index, line in enumerate(lines, 1):
-                    group = re.search('\$date":"(.*)"},', line)
+                    group = re.search('date":"(.*)"},"s"', line)
                     if group is None:
-                        logging.error('Could not find date in line =' + line)
-                    print(group.group(1))
-                    if index <= last_index and flag:
+                        # logging.warning('Could not find date in line by number: ' + str(index))
                         continue
+                    local_date = datetime.strptime(group.group(1), "%Y-%m-%dT%H:%M:%S.%f%z")
+                    if cached_date != '' and cached_date > local_date:
+                        continue
+
                     json_line: dict = json.loads(line)
                     result_line = ''
-                    for key, value in json_line.items():
-                        if key == "t":
-                            # "%Y-%m-%dT%H:%M:%S.%f%z"
-                            date = datetime.strptime(value['$date'], "%Y-%m-%dT%H:%M:%S.%f%z").strftime(
-                                '%Y-%m-%d %H:%M:%S %Z')
-                            result_line += str(date)
-                            result_line += ' CEF:0|'
+
+                    date = datetime.strptime(json_line['t']['$date'], "%Y-%m-%dT%H:%M:%S.%f%z").strftime(
+                        '%Y-%m-%d %H:%M:%S %Z')
+                    result_line += str(date)
+                    result_line += ' CEF:0|Газпром нефть|Система Корпоративного Контроля|1.0.0|'
+                    result_line += str(json_line['id']) + '|'
+                    result_line += json_line['c'] + '|'
+                    result_line += '5' + '|'
+
+                    result_line += 'cs1Label=name of thread'
+                    result_line += ' cs1=' + json_line['ctx']
+                    result_line += ' cs2Label=log output message'
+                    if json_line['msg'] == 'WiredTiger message':
+                        continue
+                    result_line += ' cs2=' + json_line['msg']
+
+                    if json_line.get('attr', {}).get('ns', False):
+                        result_line += ' suser=' + json_line['attr']['ns']
+
+                    if json_line.get('attr', {}).get('command', False):
+                        if isinstance(json_line['attr']['command'], str):
+                            result_line += ' cs3Label=command'
+                            result_line += ' cs3=' + json_line['attr']['command']
+                        elif isinstance(json_line['attr']['command'], dict):
+                            label = str(list(json_line['attr']['command'].items())[0][0])
+                            if label == 'hello' or label == 'ismaster':
+                                continue
+                            result_line += ' cs3Label=' + label
+                            result_line += ' cs3=' + str(list(json_line['attr']['command'].items())[0][1])
+                    if json_line.get('attr', {}).get('query', False):
+                        if isinstance(json_line['attr'], dict) and isinstance(json_line['attr']['query'], str):
+                            result_line += ' cs4Label=query'
+                            result_line += ' cs4=' + str(json_line['attr']['query'])
 
                     result_line += '\n'
                     file.write(result_line)
-                    last_index = index
+                    file.flush()
+                    cached_date = copy.copy(local_date)
                 file.close()
+                log_file.close()
         except IOError as e:
             logging.error('Could not open/read log file =' + mongo_log_path)
         except JSONDecodeError as e:

@@ -1,0 +1,132 @@
+[
+  {
+    "t": {
+      "$date": "2022-08-17T13:27:51.716+03:00"
+    },
+    "s": "I",
+    "c": "COMMAND",
+    "id": 51803,
+    "ctx": "conn15",
+    "msg": "Slow query",
+    "attr": {
+      "type": "command",
+      "ns": "gpn.$cmd",
+      "command": {
+        "createIndexes": "documents",
+        "indexes": [
+          {
+            "name": "subsidiary.name_1",
+            "key": {
+              "subsidiary.name": 1
+            },
+            "background": true
+          }
+        ],
+        "lsid": {
+          "id": {
+            "$uuid": "81773d30-d7e7-4254-90f4-5a7fb2958649"
+          }
+        },
+        "$db": "gpn"
+      },
+      "numYields": 0,
+      "reslen": 117,
+      "locks": {
+        "ParallelBatchWriterMode": {
+          "acquireCount": {
+            "r": 2
+          }
+        },
+        "ReplicationStateTransition": {
+          "acquireCount": {
+            "w": 2
+          }
+        },
+        "Global": {
+          "acquireCount": {
+            "r": 2
+          }
+        },
+        "Database": {
+          "acquireCount": {
+            "r": 2
+          }
+        },
+        "Collection": {
+          "acquireCount": {
+            "r": 2
+          }
+        },
+        "Mutex": {
+          "acquireCount": {
+            "r": 2
+          }
+        }
+      },
+      "remote": "127.0.0.1:63089",
+      "protocol": "op_msg",
+      "durationMillis": 0
+    }
+  },
+  {
+    "t": {
+      "$date": "2022-08-17T13:29:22.935+03:00"
+    },
+    "s": "I",
+    "c": "COMMAND",
+    "id": 51803,
+    "ctx": "conn21",
+    "msg": "Slow query",
+    "attr": {
+      "type": "command",
+      "ns": "gpn.audits",
+      "appName": "MongoDB Compass",
+      "command": {
+        "find": "audits",
+        "filter": {},
+        "sort": {
+          "_id": -1
+        },
+        "skip": 0,
+        "limit": 20,
+        "maxTimeMS": 60000,
+        "lsid": {
+          "id": {
+            "$uuid": "b1523906-6847-4dc1-b513-f73f545c0a44"
+          }
+        },
+        "$db": "gpn"
+      },
+      "planSummary": "IXSCAN { _id: 1 }",
+      "keysExamined": 20,
+      "docsExamined": 20,
+      "cursorExhausted": true,
+      "numYields": 0,
+      "nreturned": 20,
+      "queryHash": "96B27E33",
+      "planCacheKey": "65A5C8BB",
+      "reslen": 28594,
+      "locks": {
+        "Global": {
+          "acquireCount": {
+            "r": 1
+          }
+        },
+        "Mutex": {
+          "acquireCount": {
+            "r": 1
+          }
+        }
+      },
+      "storage": {
+        "data": {
+          "bytesRead": 106967,
+          "timeReadingMicros": 1994
+        }
+      },
+      "remote": "127.0.0.1:63096",
+      "protocol": "op_msg",
+      "durationMillis": 2
+    }
+  }
+]
