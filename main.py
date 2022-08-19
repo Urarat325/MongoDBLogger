@@ -84,11 +84,15 @@ def main():
                                 continue
                             result_line += ' cs3Label=' + label
                             result_line += ' cs3=' + str(list(json_line['attr']['command'].items())[0][1])
+
                     if json_line.get('attr', {}).get('query', False):
                         if isinstance(json_line['attr'], dict) and isinstance(json_line['attr']['query'], str):
                             result_line += ' cs4Label=query'
                             result_line += ' cs4=' + str(json_line['attr']['query'])
 
+                    if json_line.get('attr', {}).get('remote', False):
+                        result_line += ' cs5Label=remote'
+                        result_line += ' cs5=' + str(json_line['attr']['remote'])
                     result_line += '\n'
                     file.write(result_line)
                     file.flush()
