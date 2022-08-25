@@ -29,7 +29,7 @@ def main():
             stamp = os.stat(mongo_log_path).st_mtime
             if stamp != cached_stamp:
                 cached_stamp = stamp
-                log_file = open(mongo_log_path, 'r')
+                log_file = open(mongo_log_path, 'r', encoding='utf8')
                 lines = log_file.readlines()
 
                 file = open(output_dir, 'a+', encoding='utf8')
@@ -37,11 +37,9 @@ def main():
                     file_with_last_date = open(output_dir, 'r', encoding='utf8')
                     read_lines = file_with_last_date.readlines()
                     if len(read_lines) > 0:
-                        print(read_lines[-1])
                         group = re.search('(.*) CEF:0', read_lines[-1])
-                        print(group.group(1))
                         if group is not None:
-                            cached_date = datetime.strptime(group.group(1), "%Y-%m-%d %H:%M:%S %Z%z")
+                            cached_date = datetime.strptime(group.group(1), "%Y-%m-%d %H:%M:%S")
                     file_with_last_date.flush()
                     file_with_last_date.close()
                 for index, line in enumerate(lines, 1):
@@ -49,7 +47,10 @@ def main():
                     if group is None:
                         # logging.warning('Could not find date in line by number: ' + str(index))
                         continue
-                    local_date = datetime.strptime(group.group(1), "%Y-%m-%dT%H:%M:%S.%f%z")
+                    local_date = datetime.strptime(group.group(1), "%Y-%m-%dT%H:%M:%S.%f%z").strftime(
+                        '%Y-%m-%d %H:%M:%S')
+                    local_date = datetime.strptime(local_date, "%Y-%m-%d %H:%M:%S")
+
                     if cached_date != '' and cached_date > local_date:
                         continue
 
@@ -57,7 +58,7 @@ def main():
                     result_line = ''
 
                     date = datetime.strptime(json_line['t']['$date'], "%Y-%m-%dT%H:%M:%S.%f%z").strftime(
-                        '%Y-%m-%d %H:%M:%S %Z')
+                        '%Y-%m-%d %H:%M:%S')
                     result_line += str(date)
                     result_line += ' CEF:0|Газпром нефть|Система Корпоративного Контроля|1.0.0|'
                     result_line += str(json_line['id']) + '|'
