@@ -29,7 +29,7 @@ def main():
             stamp = os.stat(mongo_log_path).st_mtime
             if stamp != cached_stamp:
                 cached_stamp = stamp
-                log_file = open(mongo_log_path, 'r', encoding='utf8')
+                log_file = open(mongo_log_path, 'r', encoding='utf8', errors='ignore')
                 lines = log_file.readlines()
 
                 file = open(output_dir, 'a+', encoding='utf8')
@@ -39,7 +39,7 @@ def main():
                     if len(read_lines) > 0:
                         group = re.search('(.*) CEF:0', read_lines[-1])
                         if group is not None:
-                            cached_date = datetime.strptime(group.group(1), "%Y-%m-%d %H:%M:%S")
+                            cached_date = datetime.strptime(group.group(1), "%Y-%m-%d %H:%M:%S.%f")
                     file_with_last_date.flush()
                     file_with_last_date.close()
                 for index, line in enumerate(lines, 1):
@@ -47,18 +47,18 @@ def main():
                     if group is None:
                         # logging.warning('Could not find date in line by number: ' + str(index))
                         continue
-                    local_date = datetime.strptime(group.group(1), "%Y-%m-%dT%H:%M:%S.%f%z").strftime(
-                        '%Y-%m-%d %H:%M:%S')
-                    local_date = datetime.strptime(local_date, "%Y-%m-%d %H:%M:%S")
+                    local_date = datetime.strptime(group.group(1)[:-6], "%Y-%m-%dT%H:%M:%S.%f").strftime(
+                        '%Y-%m-%d %H:%M:%S.%f')
+                    local_date = datetime.strptime(local_date, "%Y-%m-%d %H:%M:%S.%f")
 
-                    if cached_date != '' and cached_date > local_date:
+                    if cached_date != '' and cached_date >= local_date:
                         continue
-
+                    cached_date = copy.copy(local_date)
                     json_line: dict = json.loads(line)
                     result_line = ''
 
-                    date = datetime.strptime(json_line['t']['$date'], "%Y-%m-%dT%H:%M:%S.%f%z").strftime(
-                        '%Y-%m-%d %H:%M:%S')
+                    date = datetime.strptime(json_line['t']['$date'][:-6], "%Y-%m-%dT%H:%M:%S.%f").strftime(
+                        '%Y-%m-%d %H:%M:%S.%f')
                     result_line += str(date)
                     result_line += ' CEF:0|Газпром нефть|Система Корпоративного Контроля|1.0.0|'
                     result_line += str(json_line['id']) + '|'
@@ -97,9 +97,9 @@ def main():
                     result_line += '\n'
                     file.write(result_line)
                     file.flush()
-                    cached_date = copy.copy(local_date)
                 file.close()
                 log_file.close()
+            # print(cached_date)
         except IOError as e:
             logging.error('Could not open/read log file =' + mongo_log_path)
         except JSONDecodeError as e:
