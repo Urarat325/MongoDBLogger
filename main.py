@@ -30,7 +30,7 @@ def main():
             stamp = os.stat(mongo_log_path).st_mtime
             if stamp != cached_stamp:
                 cached_stamp = stamp
-                log_file = open(mongo_log_path, 'r', encoding='utf8')
+                log_file = open(mongo_log_path, 'r', encoding='utf8', errors='ignore')
                 lines = log_file.readlines()
 
                 file = open(output_dir, 'a+', encoding='utf8')
