@@ -15,6 +15,7 @@ def main():
     output_dir = ''
     cached_stamp = ''
     cached_date = ''
+    is_old_version = False
     for arg in args:
         if arg.startswith('--LogPath='):
             mongo_log_path = arg.split('=')[1]
@@ -29,7 +30,7 @@ def main():
             stamp = os.stat(mongo_log_path).st_mtime
             if stamp != cached_stamp:
                 cached_stamp = stamp
-                log_file = open(mongo_log_path, 'r', encoding='utf8', errors='ignore')
+                log_file = open(mongo_log_path, 'r', encoding='utf8')
                 lines = log_file.readlines()
 
                 file = open(output_dir, 'a+', encoding='utf8')
@@ -44,9 +45,15 @@ def main():
                     file_with_last_date.close()
                 for index, line in enumerate(lines, 1):
                     group = re.search('date":"(.*)"},"s"', line)
+                    if is_old_version:
+                        old_log_version(line, cached_date, output_dir)
+                        continue
+
                     if group is None:
+                        is_old_version = old_log_version(line, cached_date, output_dir)
                         # logging.warning('Could not find date in line by number: ' + str(index))
                         continue
+
                     local_date = datetime.strptime(group.group(1)[:-6], "%Y-%m-%dT%H:%M:%S.%f").strftime(
                         '%Y-%m-%d %H:%M:%S.%f')
                     local_date = datetime.strptime(local_date, "%Y-%m-%d %H:%M:%S.%f")
@@ -109,6 +116,30 @@ def main():
             sys.exit(2)
 
         time.sleep(1)
+
+
+def old_log_version(line: str, cached_date, output_dir) -> bool:
+    line_split = line.split()
+    local_date = datetime.strptime(line_split[0][:-6], "%Y-%m-%dT%H:%M:%S.%f").strftime('%Y-%m-%d %H:%M:%S.%f')
+    local_date = datetime.strptime(local_date, "%Y-%m-%d %H:%M:%S.%f")
+
+    if cached_date != '' and cached_date >= local_date:
+        return True
+    cached_date = copy.copy(local_date)
+
+    result_line = ''
+    result_line += str(local_date)
+    result_line += ' CEF:0|Газпром нефть|Система Корпоративного Контроля|1.0.0|0|'
+    result_line += line_split[2] + '|'
+    result_line += 'cs1Label=' + line_split[3][1:-1]
+    result_line += ' cs1=' + ' '.join(line_split[4:])
+    result_line += '\n'
+
+    file = open(output_dir, 'a+', encoding='utf8')
+    file.write(result_line)
+    file.flush()
+    file.close()
+    return True
 
 
 if __name__ == "__main__":
